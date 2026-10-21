@@ -1,15 +1,5 @@
-# generated data and big files (rebuildable from the code and seeds)
+lib/
 data/
-models/
-*.safetensors
-*.gguf
-*.dump
-# Python
+*.class
 __pycache__/
-*.pyc
 .venv/
-.ipynb_checkpoints/
-# secrets and local settings
-.env
-# system files
-Thumbs.db
