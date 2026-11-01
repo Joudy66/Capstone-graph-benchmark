@@ -69,7 +69,8 @@ def evaluate(gt, text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--samples", required=True)
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out", required=True, help="folder with the answers (one sub-folder per sample)")
+    ap.add_argument("--results", help="where to save the table (default: <out>/results.csv)")
     a = ap.parse_args()
     rows = []
     for d in sorted(p for p in Path(a.out).iterdir() if (p / "answer.txt").exists()):
@@ -81,14 +82,16 @@ def main():
     if not rows:
         print("no answers found in", a.out); return
     keys = list(rows[0])
-    with open(Path(a.out) / "results.csv", "w", newline="", encoding="utf-8") as f:
+    res_path = Path(a.results) if a.results else Path(a.out) / "results.csv"
+    res_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(res_path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, keys); w.writeheader(); w.writerows(rows)
     cols = ["sample_id", "n_nodes", "pred_nodes", "node_F1", "edge_F1", "node_label_acc", "edge_label_acc",
             "direction_error_rate", "hallucinated_edges", "seconds"]
     print(" | ".join(cols))
     for r in rows:
         print(" | ".join(f"{r[c]:.2f}" if isinstance(r[c], float) else str(r[c]) for c in cols))
-    print("saved", Path(a.out) / "results.csv")
+    print("saved", res_path)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, f
 import resvgPkg from "@resvg/resvg-js";
 const { Resvg } = resvgPkg;
 
-const RENDERER_VERSION = "1.0";
+const RENDERER_VERSION = "1.1";
 const PALETTE_VERSION = "2026-10-24-working";
 const VIEW = 1000;          // layout/drawing space; resolution is a pure zoom of this
 const MARGIN = 45;
@@ -148,11 +148,17 @@ function buildSvg(g, pos, r) {
 }
 
 // ---- one sample ----
+// Reads  <dir>/graph.json  (never modified).
+// Writes <out>/<sample_id>/image_<res>.png and <out>/<sample_id>/render_info.json
 function renderSample(dir, opt) {
   const gpath = path.join(dir, "graph.json");
   if (!fs.existsSync(gpath)) throw new Error(`no graph.json in ${dir}`);
-  const todo = opt.res.filter((px) => opt.force || !fs.existsSync(path.join(dir, `image_${px}.png`)));
+  const id = path.basename(path.resolve(dir));
+  const outRoot = opt.out ?? path.join(path.dirname(path.dirname(path.resolve(dir))), "render");
+  const outDir = path.join(outRoot, id);
+  const todo = opt.res.filter((px) => opt.force || !fs.existsSync(path.join(outDir, `image_${px}.png`)));
   if (todo.length === 0) return "skipped";
+  fs.mkdirSync(outDir, { recursive: true });
   const g = JSON.parse(fs.readFileSync(gpath, "utf8"));
   const { pos, r, seed } = computeLayout(g, opt.layoutSeed);
   const svg = buildSvg(g, pos, r);
@@ -164,15 +170,16 @@ function renderSample(dir, opt) {
       background: "#FFFFFF",
       font: { fontFiles: [fontFile], loadSystemFonts: false, defaultFontFamily: "DejaVu Sans" },
     }).render().asPng();
-    fs.writeFileSync(path.join(dir, `image_${px}.png`), png);
+    fs.writeFileSync(path.join(outDir, `image_${px}.png`), png);
   }
-  if (opt.keepSvg) fs.writeFileSync(path.join(dir, "image.svg"), svg);
+  if (opt.keepSvg) fs.writeFileSync(path.join(outDir, "image.svg"), svg);
 
   // measurements for the readability flag (D9) and the overlap counter (later)
-  const mpath = path.join(dir, "meta.json");
-  const meta = fs.existsSync(mpath) ? JSON.parse(fs.readFileSync(mpath, "utf8")) : {};
-  const allRes = [...new Set([...(meta.rendering?.resolutions ?? []), ...opt.res])].sort((a, b) => a - b);
-  meta.rendering = {
+  const ipath = path.join(outDir, "render_info.json");
+  const old = fs.existsSync(ipath) ? JSON.parse(fs.readFileSync(ipath, "utf8")) : {};
+  const allRes = [...new Set([...(old.resolutions ?? []), ...opt.res])].sort((a, b) => a - b);
+  const info = {
+    sample_id: id,
     renderer: "d3-force+resvg", renderer_version: RENDERER_VERSION, palette_version: PALETTE_VERSION,
     layout: "d3-force", layout_seed_option: opt.layoutSeed, layout_seed: seed,
     view_size: VIEW, resolutions: allRes,
@@ -180,36 +187,50 @@ function renderSample(dir, opt) {
     node_diameter_px: Object.fromEntries(allRes.map((px) => [String(px), r2((2 * r * px) / VIEW)])),
     positions: pos,
   };
-  fs.writeFileSync(mpath, JSON.stringify(meta, null, 2));
+  fs.writeFileSync(ipath, JSON.stringify(info, null, 2));
   return "rendered " + todo.join(",");
 }
 
 // ---- CLI ----
+//   node render.js <sample_dir> [<sample_dir> ...]
+//   node render.js --all <samples_root>
+//   node render.js --samples <samples_root> --ids-file <file with one sample id per line>
+// Options: --out <folder> (default: "render" next to the samples folder), --res 512,1024,2048,
+//          --force, --keep-svg, --layout-seed 0
 const args = process.argv.slice(2);
-const opt = { res: [512, 1024, 2048], force: false, keepSvg: false, layoutSeed: 0 };
-let all = false; const targets = [];
+const opt = { res: [512, 1024, 2048], force: false, keepSvg: false, layoutSeed: 0, out: null };
+let all = false, samplesRoot = null, idsFile = null; const targets = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
-  if (a === "--res") opt.res = args[++i].split(",").map(Number);
+  if (a === "--res") opt.res = String(args[++i]).split(",").map(Number);
   else if (a === "--force") opt.force = true;
   else if (a === "--keep-svg") opt.keepSvg = true;
   else if (a === "--layout-seed") opt.layoutSeed = Number(args[++i]);
+  else if (a === "--out") opt.out = path.resolve(args[++i]);
+  else if (a === "--samples") samplesRoot = args[++i];
+  else if (a === "--ids-file") idsFile = args[++i];
   else if (a === "--all") all = true;
   else targets.push(a);
 }
-if (targets.length === 0) { console.error("usage: node render.js <sample_dir> | --all <samples_root> [--res 512,1024] [--force]"); process.exit(1); }
-
 let dirs = targets;
-if (all) {
+if (idsFile) {
+  if (!samplesRoot) { console.error("--ids-file needs --samples <samples_root>"); process.exit(1); }
+  dirs = fs.readFileSync(idsFile, "utf8").split(/\r?\n/).map((x) => x.trim()).filter((x) => x && !x.startsWith("#"))
+    .map((id) => path.join(samplesRoot, id));
+} else if (all) {
   dirs = fs.readdirSync(targets[0], { withFileTypes: true })
     .filter((d) => d.isDirectory() && fs.existsSync(path.join(targets[0], d.name, "graph.json")))
     .map((d) => path.join(targets[0], d.name)).sort();
+}
+if (dirs.length === 0) {
+  console.error("usage: node render.js <sample_dir> ... | --all <samples_root> | --samples <root> --ids-file <file>  [--out <folder>] [--res 512,1024] [--force]");
+  process.exit(1);
 }
 let ok = 0, skipped = 0, failed = 0;
 for (const d of dirs) {
   try {
     const res = renderSample(d, opt);
-    if (res === "skipped") skipped++; else { ok++; if (!all) console.log(d, res); }
+    if (res === "skipped") skipped++; else { ok++; if (dirs.length < 10) console.log(d, res); }
   } catch (err) { failed++; console.error("FAILED", d, "-", err.message); }
 }
 console.log(`done: ${ok} rendered, ${skipped} skipped (already exist), ${failed} failed`);

@@ -1,0 +1,36 @@
+stages:
+  render:
+    cmd: node src/render/render.js --samples data/samples_full --ids-file configs/pilot_ids.txt --out data/render --res ${render.res}
+    deps:
+      - src/render/render.js
+      - configs/pilot_ids.txt
+      - data/samples_full
+    params:
+      - render
+    outs:
+      - data/render
+  vlm:
+    cmd: >-
+      python src/vlm/run_vlm.py --samples data/render --out data/vlm/${vlm.run_name}
+      --ids-file configs/pilot_ids.txt --res ${vlm.res} --model ${vlm.model} --prompt ${vlm.prompt}
+      --temperature ${vlm.temperature} --top-p ${vlm.top_p} --top-k ${vlm.top_k}
+      --presence-penalty ${vlm.presence_penalty} --seed ${vlm.seed}
+      --num-ctx ${vlm.num_ctx} --num-predict ${vlm.num_predict}
+    deps:
+      - src/vlm/run_vlm.py
+      - ${vlm.prompt}
+      - configs/pilot_ids.txt
+      - data/render
+    params:
+      - vlm
+    outs:
+      - data/vlm/${vlm.run_name}:
+          persist: true
+  evaluate:
+    cmd: python src/vlm/evaluate.py --samples data/samples_full --out data/vlm/${vlm.run_name} --results data/results/${vlm.run_name}.csv
+    deps:
+      - src/vlm/evaluate.py
+      - data/samples_full
+      - data/vlm/${vlm.run_name}
+    outs:
+      - data/results/${vlm.run_name}.csv

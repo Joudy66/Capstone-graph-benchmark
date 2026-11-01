@@ -1,0 +1,29 @@
+schema: '2.0'
+stages:
+  render:
+    cmd: node src/render/render.js --samples data/samples_full --ids-file 
+      configs/pilot_ids.txt --out data/render --res 1024
+    deps:
+    - path: configs/pilot_ids.txt
+      hash: md5
+      md5: cc66b7730374c2f4c1cc69669dc3e4c1
+      size: 56
+    - path: data/samples_full
+      hash: md5
+      md5: 0398977dea5dd410c681d3365936aa4c.dir
+      size: 33952626
+      nfiles: 2467
+    - path: src/render/render.js
+      hash: md5
+      md5: 0372dc7bc21fab2bf63186d063264668
+      size: 11244
+    params:
+      params.yaml:
+        render:
+          res: '1024'
+    outs:
+    - path: data/render
+      hash: md5
+      md5: 5b373e8374f9351de76bdf4ae1f160f1.dir
+      size: 312682
+      nfiles: 8

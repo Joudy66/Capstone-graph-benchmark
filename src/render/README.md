@@ -7,19 +7,21 @@ Reads `graph.json`, draws the graph with a seeded D3 force layout, writes PNG im
     npm install
 
 ## Run
-One sample, three resolutions (512, 1024, 2048):
+One sample (output goes to `data\render\<sample_id>\`, next to the samples folder):
 
-    node render.js ..\..\data\samples\<sample_folder>
+    node render.js ..\..\data\samples_full\sample_000301
 
-Whole folder (skips images that already exist):
+A list of samples (one id per line in a text file), as used by the DVC stage:
 
-    node render.js --all ..\..\data\samples_full
+    node render.js --samples ..\..\data\samples_full --ids-file ..\..\configs\pilot_ids.txt --out ..\..\data\render --res 1024
 
-Options: `--res 512,1024` (choose resolutions), `--force` (redraw), `--keep-svg` (also save image.svg), `--layout-seed 1` (a different layout of the same graph).
+Whole folder (skips images that already exist): `node render.js --all ..\..\data\samples_full`
 
-## What it writes in each sample folder
-- `image_512.png`, `image_1024.png`, `image_2048.png`
-- `meta.json` -> `rendering`: renderer version, palette version, layout seed, node radius, node diameter in pixels per resolution, and the (x, y) position of every node (drawing space 0..1000). The overlap counter (step 4) will read these positions.
+Options: `--out <folder>`, `--res 512,1024` (choose resolutions), `--force` (redraw), `--keep-svg` (also save image.svg), `--layout-seed 1` (a different layout of the same graph).
+
+## What it writes (the sample folder with graph.json is never modified)
+- `<out>/<sample_id>/image_512.png`, `image_1024.png`, `image_2048.png`
+- `<out>/<sample_id>/render_info.json`: renderer version, palette version, layout seed, node radius, node diameter in pixels per resolution, and the (x, y) position of every node (drawing space 0..1000). The overlap counter (step 4) will read these positions.
 
 ## Rules implemented
 - Node fill = node label (working palette of 24 Oct); node centre = ID as stored.
