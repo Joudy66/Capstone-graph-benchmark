@@ -1,0 +1,6 @@
+outs:
+- md5: c10a826944f58c06da78a61625d279c6.dir
+  size: 36894
+  nfiles: 9
+  hash: md5
+  path: pilot_run_instruct_v2

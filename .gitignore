@@ -1,5 +1,7 @@
 lib/
-data/
+data/*
+!data/*.dvc
+!data/.gitignore
 *.class
 __pycache__/
 .venv/

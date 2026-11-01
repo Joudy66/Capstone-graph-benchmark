@@ -1,0 +1,6 @@
+outs:
+- md5: 90d8a676b23e2e1677696b4af3e709ef.dir
+  size: 378778
+  nfiles: 138
+  hash: md5
+  path: base_full
