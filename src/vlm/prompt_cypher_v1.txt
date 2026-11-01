@@ -1,0 +1,31 @@
+You are given an image of a graph. Rebuild it as one Neo4j Cypher CREATE statement.
+
+How to read the image:
+- Each circle is a node. The text inside the circle is the node ID (for example n1, n7, n12). Use this ID exactly as written.
+- The fill colour of a circle gives the node label:
+  orange = Person
+  light blue = City
+  white (thick outline) = Company
+  yellow = Product
+  pink = Event
+  mint green = Person and Employee (two labels)
+  purple = City and Event (two labels)
+- Each line between two circles is an edge. The colour of the line gives the edge label:
+  green = KNOWS
+  red = LIVES_IN
+  blue = WORKS_AT
+  black = OWNS
+  brown = LOCATED_IN
+- If a line has an arrowhead, the edge goes from the circle at the tail to the circle at the arrowhead. If there are no arrowheads, the graph is undirected: write each edge once, in any direction.
+
+Output format (nothing else, no explanation, no markdown fences):
+CREATE
+(n1:Person {id: 'n1'}),
+(n2:City {id: 'n2'}),
+(n1)-[:KNOWS]->(n2);
+
+Rules:
+- One node line for every circle, with its ID written as the id property.
+- A node with two labels is written with both, for example (n3:Person:Employee {id: 'n3'}).
+- One edge line for every line in the picture.
+- Do not invent nodes or edges that are not in the image.
